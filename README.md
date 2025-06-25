@@ -14,20 +14,20 @@ NetJam is a tool that allows you to instantly save any webpage, article, video, 
 
 NetJam is built around a few key functionalities to make saving and sharing seamless:
 
-* [cite_start]**One-Click Save:** A simple click of the web extension icon or a keyboard shortcut is all it takes to save a resource instantly[cite: 9, 22].
-* [cite_start]**Auto-Organized Threads:** Publicly saved resources are automatically published in a live, community feed where other users can discover them[cite: 10, 11].
-* **Community Feed & Engagement:** Browse an ongoing stream of saved resources from the community. [cite_start]You can like, comment on, and discuss content with other users, turning saved links into dynamic conversations[cite: 11, 12].
-* **User Profiles & Collections:** Each user gets a profile to showcase their saved resources. [cite_start]You can organize your content into curated collections or folders for easy access[cite: 13, 29].
-* **Tagging & Search:** Add custom tags to your saved resources for easy categorization. [cite_start]This enables powerful search functionality to find exactly what you're looking for within your own collections or the community feed[cite: 14].
-* **Privacy Controls:** You have full control over your saved resources. [cite_start]Choose to save them publicly for the community thread or keep them private for your eyes only[cite: 16].
-* [cite_start]**Cross-Platform Sync:** Your saved resources are synced across all your devices, so you can access them anywhere[cite: 17].
+* **One-Click Save:** A simple click of the web extension icon or a keyboard shortcut is all it takes to save a resource instantly[cite: 9, 22].
+* **Auto-Organized Threads:** Publicly saved resources are automatically published in a live, community feed where other users can discover them[cite: 10, 11].
+* **Community Feed & Engagement:** Browse an ongoing stream of saved resources from the community. You can like, comment on, and discuss content with other users, turning saved links into dynamic conversations[cite: 11, 12].
+* **User Profiles & Collections:** Each user gets a profile to showcase their saved resources. You can organize your content into curated collections or folders for easy access[cite: 13, 29].
+* **Tagging & Search:** Add custom tags to your saved resources for easy categorization. This enables powerful search functionality to find exactly what you're looking for within your own collections or the community feed[cite: 14].
+* **Privacy Controls:** You have full control over your saved resources. Choose to save them publicly for the community thread or keep them private for your eyes only[cite: 16].
+* **Cross-Platform Sync:** Your saved resources are synced across all your devices, so you can access them anywhere[cite: 17].
 
 ### User Flow: How it Works
 
-1.  **Installation:** Install the NetJam web extension from your browser's store. [cite_start]A quick onboarding tutorial will guide you through the features on your first use[cite: 19, 20].
-2.  **Saving:** While you're Browse, click the extension icon. [cite_start]A small popup will appear, allowing you to add tags, a note, and choose your privacy setting (public or private)[cite: 23]. [cite_start]Once you confirm, the resource is saved to your profile and published to the community thread if it's public[cite: 24].
-3.  **Browse & Interacting:** Open the NetJam web app or the extension popup to view the community feed. [cite_start]You can like and comment on resources, follow other users, or follow specific tags to customize your stream[cite: 26, 27].
-4.  [cite_start]**Managing Resources:** In the web app, you can access your profile to organize your saved resources into collections, edit their tags and notes, and manage your privacy settings[cite: 28, 30].
+1.  **Installation:** Install the NetJam web extension from your browser's store. A quick onboarding tutorial will guide you through the features on your first use[cite: 19, 20].
+2.  **Saving:** While you're Browse, click the extension icon. A small popup will appear, allowing you to add tags, a note, and choose your privacy setting (public or private)[cite: 23]. Once you confirm, the resource is saved to your profile and published to the community thread if it's public[cite: 24].
+3.  **Browse & Interacting:** Open the NetJam web app or the extension popup to view the community feed. You can like and comment on resources, follow other users, or follow specific tags to customize your stream[cite: 26, 27].
+4. **Managing Resources:** In the web app, you can access your profile to organize your saved resources into collections, edit their tags and notes, and manage your privacy settings[cite: 28, 30].
 
 ### Technology Stack (Proposed)
 
