@@ -98,3 +98,6 @@ n.execute("""
         FOREIGN KEY (followed_id) REFERENCES users(user_id)
     )
 """)
+
+netjam_db.commit()
+netjam_db.close()
