@@ -11,7 +11,7 @@ n.execute("""
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         profile_picture_url TEXT,
-        created_at TEXT NOT NULL             
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP            
     )       
 """ )
 
