@@ -80,13 +80,55 @@ def user_login():
     else:
         return jsonify({"message": "Invalid credentials"}), 401
 
-# --- Basic Route (for testing if the server is running) ---
-# Protected route
-@app.route("/protected", methods=["GET"])
+# API endpoint to retrieve user profile data (`/profile`)
+@app.route("/profile", methods=["GET"])
 @jwt_required()
-def protected():
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+def profile():
+    current_user_id = get_jwt_identity()
+    current_user_id = int(current_user_id)
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        # Get user details
+        cursor.execute("SELECT user_id, username, email, profile_picture_url FROM users WHERE user_id = ?", (current_user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        user_data = dict(user) # Convert Row object to dictionary
+
+        # Get saved resources
+        cursor.execute("SELECT resource_id, url, title, description, tags, privacy_setting FROM resources WHERE user_id = ?", (current_user_id,))
+        resources = [dict(row) for row in cursor.fetchall()]
+
+        # Get collections
+        cursor.execute("SELECT collection_id, collection_name, description FROM collections WHERE user_id = ?", (current_user_id,))
+        collections = [dict(row) for row in cursor.fetchall()]
+
+        # Get follower and following counts (or lists, depending on desired detail)
+        cursor.execute("SELECT COUNT(*) FROM followers WHERE followed_id = ?", (current_user_id,))
+        followers_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM followers WHERE follower_id = ?", (current_user_id,))
+        following_count = cursor.fetchone()[0]
+
+        return jsonify({
+            "user": user_data,
+            "resources": resources,
+            "collections": collections,
+            "social_stats": {
+                "followers": followers_count,
+                "following": following_count
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error fetching profile: {e}")
+        return jsonify({"message": "An error occurred while fetching profile data"}), 500
+    finally:
+        db.close()
+
 
 @app.route('/')
 def index():
