@@ -2,9 +2,26 @@
   "manifest_version": 3,
   "name": "Netjam",
   "version": "1.0.0",
-  "description": "Instantly save any valuable web resource - links, images, bookmarks, notes, quotes, or text highlights.",
+  "description": "Instantly save any valuable web resource - links, medias, notes, quotes, or text highlights.",
   "icons": {
     "48": "images/icon-48.png",
     "128": "images/icon-128.png"
-  }
+  },
+  "action" : {
+    "default_popup": "popup.html"
+  },
+  "permissions" : [
+    "activeTab", "scripting", "contextMenus", "storage"  
+  ],
+  "background" : {
+    "service_worker": "background.js"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://127.0.0.1:5000/*"
+    ]
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ]
 }

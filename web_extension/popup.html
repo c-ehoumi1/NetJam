@@ -1,0 +1,48 @@
+<html>
+    <head>
+        <script src="popup.js"></script>
+        <style>
+            .tag {
+                display: inline-block;
+                background: #e0e0e0;
+                padding: 2px 8px;
+                margin: 2px;
+                border-radius: 12px;
+                font-size: 14px;
+            }
+            .tag.error {
+                background: #ffdddd;
+                border: 1px solid red;
+            }
+        </style>
+    </head>
+    <body>
+        <form id="save-form">
+            <ul style="list-style-type: none; padding-left: 0;">
+                <li>
+                    <label for="save-title" >Title</label>
+                    <input type="text" id="save-title" name="savetitle"/>
+                </li>
+                <li>
+                    <label for="description" >Description</label>
+                    <textarea type="text" id="description" name="description"></textarea>
+                </li>
+                <li>
+                    <label for="tags" >Tags</label>
+                    <input type="text" id="tags" placeholder="Enter tags separated by commas">
+                    <div id="tag-preview"></div>
+                    <div id="tag-error" class="error-message" style="color:red; display:none;"></div>
+                </li>
+                <li title="Select privacy setting for your resource">
+                    <input type="radio" id="private" name="privacy_setting" value="private">
+                    <label for="private">Private</label>
+                    <input type="radio" id="public" name="privacy_setting" value="public" checked>
+                    <label for="public">Public</label>
+                </li>
+            </ul>
+            <div class="button">
+                <button type="submit">Save</button>
+            </div>
+         </form>
+    </body>
+</html>

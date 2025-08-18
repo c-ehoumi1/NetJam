@@ -1,0 +1,50 @@
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const accessToken = localStorage.getItem('access_token');
+
+        if (!accessToken) {
+            window.location.href = '/login'; 
+            return;
+        }
+ 
+        const extensionId = "cplcbeblglebccamhkldndffcbdmnlol";
+ 
+        try {
+            // Check if the script is running in a context where Chrome extension APIs are available
+            if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                // Send the access token to your Chrome extension
+                chrome.runtime.sendMessage(extensionId, { type: 'SET_TOKEN', token: accessToken }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Error sending message to extension:', chrome.runtime.lastError.message);
+                    } else {
+                        console.log('Response from extension:', response);
+                    }
+                });
+            } else {
+                console.warn("Chrome extension messaging is not available in this context.");
+            }
+ 
+            const response = await fetch('/api/profile', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}` 
+                }
+            });
+
+            if (response.ok) {
+                const profileData = await response.json();
+                console.log('User profile data:', profileData);
+                document.getElementById('username-display').textContent = profileData.user.username;
+            } else {
+                console.error('Failed to fetch profile data:', response.statusText);
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            }
+        } catch (error) {
+            console.error('An error occurred:', error);
+        }
+    });
+</script>
+
+<h1 id="username-display"> </h1>

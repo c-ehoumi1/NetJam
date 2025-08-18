@@ -23,7 +23,8 @@ n.execute("""
         title TEXT,
         description TEXT,
         notes TEXT,
-        saved_at TEXT NOT NULL,
+        preview TEXT NOT NULL,
+        saved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         privacy_setting TEXT NOT NULL DEFAULT 'public',
         FOREIGN KEY (user_id) REFERENCES users(user_id)
     )
