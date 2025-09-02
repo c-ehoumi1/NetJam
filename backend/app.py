@@ -41,64 +41,65 @@ def validate_tags(tag_string):
     }
 
 # --- API Endpoint: User Registration ---
-@app.route('/register', methods = ['GET', 'POST'])
+@app.route('/api/register', methods = ['GET', 'POST'])
 def register_user():
-    if request.method == 'GET':
-        return render_template('register.html')
-    
     #get users data from web app
-    user_name = request.form.get('username')
-    user_email = request.form.get('email')
-    user_password = request.form.get('password')
-    
-    if not user_name or not user_password or not user_email:
-        return jsonify({"message": "Username, mail and password are required"}), 400
-    print("Registering:", user_name, user_email)  # Debug print
-    user_password = generate_password_hash(user_password)
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({"message": "Username and password are required"}), 400
+
+    hashed_password = generate_password_hash(password)
 
     db = get_db()
     cursor = db.cursor()
     try:
-        cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                       (user_name, user_email, user_password))
+        # Assuming email can be NULL for now to match the frontend form
+        cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                       (username, hashed_password))
         db.commit()
-        db.close()
-        return redirect('/login')
+        user_id = cursor.lastrowid
+        access_token = create_access_token(identity=str(user_id))
+        return jsonify(access_token=access_token, message="User registered successfully"), 201
     except sqlite3.IntegrityError as e:
-        db.close()
         print("IntegrityError:", e)  # Debug print
-        return jsonify({"message": "Username already exists"}), 409 # Conflict
+        return jsonify({"message": "Username already exists"}), 409  # Conflict
     except Exception as e:
-        db.close()
         print("Exception:", e)  # Debug print
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
 
 # --- Implement user login API endpoint --- 
-@app.route('/login', methods = ['GET', 'POST'])
+@app.route('/api/login', methods = ['GET', 'POST'])
 def user_login():
-    if request.method == 'GET':
-        return render_template('login.html')
-    
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+
     # get user entries(username or mail and password)
-    usernameentered = request.form.get('usernameentry')
-    pass_entered = request.form.get('passentry')
+    usernameentered = data.get('username')
+    pass_entered =data.get('password')
     if not usernameentered or not pass_entered:
         return jsonify({"message": "Username and password are required"}), 400
 
     # compare user password entered with password saved in db for that username
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ?", (usernameentered,) )
-    user = cursor.fetchone()
-    db.close()
-    #return message depending on credentials crorrectness
-    if user and check_password_hash(user['password_hash'], pass_entered) :
-        #If successful, generating a token (e.g., JWT) for session management and sending it back to the client. This token will then be used for subsequent authenticated requests
-        access_token = create_access_token(identity=str(user['user_id']))
-        #redirect user to profile page
-        return jsonify(access_token=access_token, message="Login successful"), 200
-    else:
-        return jsonify({"message": "Invalid credentials"}), 401
+    try:
+        cursor.execute("SELECT * FROM users WHERE username = ?", (usernameentered,) )
+        user = cursor.fetchone()
+        #return message depending on credentials crorrectness
+        if user and check_password_hash(user['password_hash'], pass_entered) :
+            #If successful, generating a token (e.g., JWT) for session management and sending it back to the client. This token will then be used for subsequent authenticated requests
+            access_token = create_access_token(identity=str(user['user_id']))
+            return jsonify(access_token=access_token, message="Login successful"), 200
+        else:
+            return jsonify({"message": "Invalid credentials"}), 401
+    finally:
+        db.close()
 
 #--- API Endpoint to receive webclips from the user
 @app.route('/save_resource', methods=["POST"])
@@ -150,16 +151,14 @@ def save_resource():
                            (resource_id, tag_id))
 
         db.commit()
-        db.close()
-        
     except sqlite3.IntegrityError as e:
-        db.close()
         print("IntegrityError:", e)
         return jsonify({"message": "Error saving in the db"}), 409
     except Exception as e:
-        db.close()
         print("Exception:", e)
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
         
     return jsonify({"message": "Resource saved successfully"}), 200
 
@@ -239,4 +238,4 @@ def index():
     return "NetJam Backend is running!"
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
