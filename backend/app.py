@@ -162,11 +162,6 @@ def save_resource():
         
     return jsonify({"message": "Resource saved successfully"}), 200
 
-# Route to serve the profile page HTML
-@app.route("/profile", methods=["GET"])
-def serve_profile_page():
-    return render_template('profile.html')
-
 # API endpoint to retrieve user profile data (`/api/profile`)
 @app.route("/api/profile", methods=["GET"])
 @jwt_required()

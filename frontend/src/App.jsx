@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
+import Profile from './components/Profile';
 
 // --- Main App Component ---
 function App() {
@@ -62,18 +63,7 @@ function App() {
   }, [access_token, handleLogout]);
 
   if (access_token && user) {
-    return (
-      <div className="App">
-        <header>
-          <h1>Welcome, {user.user.username}!</h1>
-        </header>
-        <main>
-          <h2>Your Profile</h2>
-          <p>Email: {user.user.email || 'Not provided'}</p>
-          <button onClick={handleLogout}>Logout</button>
-        </main>
-      </div>
-    );
+    return <Profile user={user} handleLogout={handleLogout} />;
   }
 
   return (
