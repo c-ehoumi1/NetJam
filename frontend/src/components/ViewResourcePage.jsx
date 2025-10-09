@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ViewResource from './viewresource.jsx';
+import References from './References.jsx';
 
 function ViewResourcePage() {
     const { resourceId } = useParams();
@@ -66,8 +67,11 @@ function ViewResourcePage() {
                     <button className="source">Go to source</button>
                 </a>
             </header>
-            <main>
+            <main className="resource-view-main">
                 <ViewResource resource={resource} />
+                <aside>
+                    <References/>
+                </aside>
             </main>
         </div>
     );

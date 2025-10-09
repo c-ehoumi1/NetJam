@@ -112,6 +112,7 @@ def save_resource():
         return jsonify({"message": "No data provided"}), 400
 
     url = data.get('url')
+    title = data.get('title') # <-- Add this line
     description = data.get('description')
     tags_string = data.get('tags')
     page_capture = data.get('pagecapture')
@@ -131,8 +132,8 @@ def save_resource():
     
     try:
         cursor.execute(
-            "INSERT INTO resources (user_id, url, description, preview, privacy_setting) VALUES (?, ?, ?, ?, ?)",
-            (current_user_id, url, description, page_capture, privacy_setting)
+            "INSERT INTO resources (user_id, url, title, description, preview, privacy_setting) VALUES (?, ?, ?, ?, ?, ?)",
+            (current_user_id, url, title, description, page_capture, privacy_setting)
         )
         resource_id = cursor.lastrowid
         
@@ -162,6 +163,142 @@ def save_resource():
         
     return jsonify({"message": "Resource saved successfully"}), 200
 
+# --- API Endpoint to delete a resource ---
+@app.route('/api/resource/<int:resource_id>', methods=['DELETE'])
+@jwt_required()
+def delete_resource(resource_id):
+    current_user_id = get_jwt_identity()
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        # First, verify that the resource belongs to the current user
+        cursor.execute("SELECT user_id FROM resources WHERE resource_id = ?", (resource_id,))
+        resource = cursor.fetchone()
+
+        if not resource:
+            return jsonify({"message": "Resource not found"}), 404
+        
+        if str(resource['user_id']) != str(current_user_id):
+            return jsonify({"message": "Unauthorized to delete this resource"}), 403
+
+        # If authorized, delete the resource and its tag associations
+        cursor.execute("DELETE FROM resource_tags WHERE resource_id = ?", (resource_id,))
+        cursor.execute("DELETE FROM resources WHERE resource_id = ?", (resource_id,))
+        db.commit()
+        return jsonify({"message": "Resource deleted successfully"}), 200
+    except Exception as e:
+        print(f"Error deleting resource: {e}")
+        return jsonify({"message": "An error occurred while deleting the resource"}), 500
+    finally:
+        db.close()
+
+# --- API Endpoint to update a resource ---
+@app.route('/api/resource/<int:resource_id>', methods=['PATCH'])
+@jwt_required()
+def update_resource(resource_id):
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"message": "No update data provided"}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("SELECT user_id FROM resources WHERE resource_id = ?", (resource_id,))
+        resource = cursor.fetchone()
+
+        if not resource:
+            return jsonify({"message": "Resource not found"}), 404
+        
+        if str(resource['user_id']) != str(current_user_id):
+            return jsonify({"message": "Unauthorized to edit this resource"}), 403
+
+        if 'description' in data:
+            cursor.execute("UPDATE resources SET description = ? WHERE resource_id = ?",
+                           (data['description'], resource_id))
+        
+        if 'notes' in data:
+            cursor.execute("UPDATE resources SET notes = ? WHERE resource_id = ?",
+                           (data['notes'], resource_id))
+
+        if 'tags' in data:
+            tags_string = data.get('tags', '')
+            tags_validation = validate_tags(tags_string)
+            
+            if not tags_validation['is_valid']:
+                return jsonify({'success': False, 'errors': tags_validation['errors']}), 400
+            
+            tags_validated = tags_validation['valid_tags']
+            
+            cursor.execute("DELETE FROM resource_tags WHERE resource_id = ?", (resource_id,))
+            
+            for tag_name in tags_validated:
+                cursor.execute("SELECT tag_id FROM tags WHERE tag_name = ?", (tag_name,))
+                tag_result = cursor.fetchone()
+                
+                if tag_result:
+                    tag_id = tag_result[0]
+                else:
+                    cursor.execute("INSERT INTO tags (tag_name) VALUES (?)", (tag_name,))
+                    tag_id = cursor.lastrowid
+                
+                cursor.execute("INSERT INTO resource_tags (resource_id, tag_id) VALUES (?, ?)",
+                               (resource_id, tag_id))
+
+        db.commit()
+        return jsonify({"message": "Resource updated successfully"}), 200
+
+    except Exception as e:
+        print(f"Error updating resource: {e}")
+        return jsonify({"message": "An error occurred while updating the resource"}), 500
+    finally:
+        db.close()
+
+ # --- API Endpoint to get a single resource ---
+@app.route('/api/resource/<int:resource_id>', methods=['GET'])
+@jwt_required()
+def get_resource(resource_id):
+    current_user_id = get_jwt_identity()
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        # Fetch the resource and its tags
+        cursor.execute("""
+            SELECT
+                r.resource_id, r.user_id, r.url, r.title, r.description, r.notes,
+                r.preview, r.privacy_setting, r.saved_at,
+                GROUP_CONCAT(t.tag_name) AS tags
+            FROM
+                resources AS r
+            LEFT JOIN
+                resource_tags AS rt ON r.resource_id = rt.resource_id
+            LEFT JOIN
+                tags AS t ON rt.tag_id = t.tag_id
+            WHERE
+                r.resource_id = ?
+            GROUP BY
+                r.resource_id
+        """, (resource_id,))
+        resource = cursor.fetchone()
+
+        if not resource:
+            return jsonify({"message": "Resource not found"}), 404
+
+        # Basic privacy check: only the owner can see private resources for now
+        if resource['privacy_setting'] == 'private' and str(resource['user_id']) != str(current_user_id):
+            return jsonify({"message": "Unauthorized to view this resource"}), 403
+
+        return jsonify(dict(resource)), 200
+    except Exception as e:
+        print(f"Error fetching resource: {e}")
+        return jsonify({"message": "An error occurred while fetching the resource"}), 500
+    finally:
+        db.close()
+
 # API endpoint to retrieve user profile data (`/api/profile`)
 @app.route("/api/profile", methods=["GET"])
 @jwt_required()
@@ -182,7 +319,7 @@ def get_profile_data():
         # Get saved resources with their tags
         cursor.execute("""
             SELECT
-                r.resource_id, r.url, r.title, r.description, r.privacy_setting,
+                r.resource_id, r.url, r.title, r.description, r.privacy_setting, r.preview,
                 GROUP_CONCAT(t.tag_name) AS tags
             FROM
                 resources AS r

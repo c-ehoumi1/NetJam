@@ -39,3 +39,16 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+.resource-view-main {
+  display: flex;
+}
+
+
+.resource-view-main > div:first-child {
+  flex: 2;
+}
+
+.resource-view-main > aside {
+  flex: 1;
+}

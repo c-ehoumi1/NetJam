@@ -1,14 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css'
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import Profile from './components/Profile';
+import ViewResourcePage from './components/ViewResourcePage';
+
+function AuthPage({ setToken }) {
+  const [view, setView] = useState('login');
+  return view === 'login'
+    ? <LoginForm setToken={setToken} switchToRegister={() => setView('register')} />
+    : <RegisterForm setToken={setToken} switchToLogin={() => setView('login')} />;
+}
 
 // --- Main App Component ---
 function App() {
   const [access_token, setToken] = useState(() => localStorage.getItem('access_token'));
   const [user, setUser] = useState(null);
-  const [view, setView] = useState('login');
 
   const handleLogout = useCallback(() => {
     const extensionId = "cplcbeblglebccamhkldndffcbdmnlol";
@@ -62,23 +70,26 @@ function App() {
     fetchUserProfile();
   }, [access_token, handleLogout]);
 
-  if (access_token && user) {
-    return <Profile user={user} handleLogout={handleLogout} />;
-  }
-
   return (
-    <div className="App">
-      <header>
-        <h1>Welcome to NetJam</h1>
-      </header>
-      <main>
-        {view === 'login' ? (
-          <LoginForm setToken={setToken} switchToRegister={() => setView('register')} />
-        ) : (
-          <RegisterForm setToken={setToken} switchToLogin={() => setView('login')} />
-        )}
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="App">
+        <Routes>
+          <Route path="/login" element={
+            access_token && user ? <Navigate to="/profile" /> : <AuthPage setToken={setToken} />
+          } />
+          <Route path="/profile" element={
+            access_token && user ? <Profile user={user} handleLogout={handleLogout} /> : <Navigate to="/login" />
+          } />
+          <Route path="/resource/:resourceId" element={
+            access_token && user ? <ViewResourcePage /> : <Navigate to="/login" />
+          } />
+          {/* Default route */}
+          <Route path="*" element={
+            access_token && user ? <Navigate to="/profile" /> : <Navigate to="/login" />
+          } />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
 
