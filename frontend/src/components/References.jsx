@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Connections from './connections.jsx';
 import Comments from'./comments.jsx';
 
-function References (){
+function References ({ relationships, onConnectionDeleted }){
     const [view, setView] = useState('connections');
     
     const showConnections = () => setView('connections');
@@ -12,7 +12,7 @@ function References (){
         <div className='connections-comments'>
             <button onClick={showConnections}>Connections</button>
             <button onClick={showComments} style={{ marginLeft: '1rem' }}>Comments</button>
-            {view === 'connections' && <Connections/>}
+            {view === 'connections' && <Connections relationships={relationships} onConnectionDeleted={onConnectionDeleted} />}
             {view === 'comments' && <Comments/>}
         </div>
     );

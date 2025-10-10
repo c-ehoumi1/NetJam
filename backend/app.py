@@ -365,6 +365,151 @@ def get_profile_data():
         if db:
             db.close()
 
+# --- API Endpoints for Resource Relationships ---
+
+VALID_RELATIONSHIP_TYPES = [
+    'Related To',
+    'Depends On',
+    'Contradicts',
+    'Is Example Of',
+    'Inspired By'
+]
+
+@app.route('/api/relationships', methods=['POST'])
+@jwt_required()
+def create_relationship():
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+
+    resource_a_id = data.get('resource_a_id')
+    resource_b_id = data.get('resource_b_id')
+    relationship_type = data.get('relationship_type')
+
+    if not all([resource_a_id, resource_b_id, relationship_type]):
+        return jsonify({"message": "resource_a_id, resource_b_id, and relationship_type are required"}), 400
+
+    if relationship_type not in VALID_RELATIONSHIP_TYPES:
+        return jsonify({"message": f"Invalid relationship_type. Must be one of: {', '.join(VALID_RELATIONSHIP_TYPES)}"}), 400
+
+    if resource_a_id == resource_b_id:
+        return jsonify({"message": "A resource cannot be related to itself"}), 400
+
+    db = get_db()
+    try:
+        # Verify both resources exist and belong to the user
+        cursor = db.cursor()
+        cursor.execute("SELECT COUNT(*) FROM resources WHERE resource_id IN (?, ?) AND user_id = ?", (resource_a_id, resource_b_id, current_user_id))
+        count = cursor.fetchone()[0]
+        if count != 2:
+             return jsonify({"message": "One or both resources not found or you do not have permission to link them"}), 404
+
+        cursor.execute(
+            "INSERT INTO resource_relationships (user_id, resource_a_id, resource_b_id, relationship_type) VALUES (?, ?, ?, ?)",
+            (current_user_id, resource_a_id, resource_b_id, relationship_type)
+        )
+        db.commit()
+        return jsonify({"message": "Relationship created successfully"}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({"message": "This relationship already exists"}), 409
+    except Exception as e:
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
+
+@app.route('/api/relationships', methods=['DELETE'])
+@jwt_required()
+def delete_relationship():
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+    resource_a_id = data.get('resource_a_id')
+    resource_b_id = data.get('resource_b_id')
+    relationship_type = data.get('relationship_type')
+
+    if not all([resource_a_id, resource_b_id, relationship_type]):
+        return jsonify({"message": "resource_a_id, resource_b_id, and relationship_type are required"}), 400
+
+    db = get_db()
+    try:
+        cursor = db.cursor()
+        cursor.execute(
+            "DELETE FROM resource_relationships WHERE user_id = ? AND resource_a_id = ? AND resource_b_id = ? AND relationship_type = ?",
+            (current_user_id, resource_a_id, resource_b_id, relationship_type)
+        )
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Relationship not found or you are not authorized to delete it"}), 404
+        
+        db.commit()
+        return jsonify({"message": "Relationship deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
+
+@app.route('/api/resource/<int:resource_id>/relationships', methods=['GET'])
+@jwt_required()
+def get_relationships(resource_id):
+    current_user_id = get_jwt_identity()
+    db = get_db()
+    try:
+        cursor = db.cursor()
+
+        # 1. First, check if the user has permission to view the primary resource.
+        cursor.execute("SELECT user_id, privacy_setting FROM resources WHERE resource_id = ?", (resource_id,))
+        primary_resource = cursor.fetchone()
+
+        if not primary_resource:
+            return jsonify({"message": "Resource not found"}), 404
+
+        if primary_resource['privacy_setting'] == 'private' and str(primary_resource['user_id']) != str(current_user_id):
+            return jsonify({"message": "You are not authorized to view this resource or its relationships"}), 403
+
+        # 2. Fetch all public/owned relationships connected to this resource (both incoming and outgoing).
+        # We use a UNION to combine two queries:
+        #  - The first SELECT finds outgoing relationships (A -> B)
+        #  - The second SELECT finds incoming relationships (B -> A)
+        # The WHERE clause in each part ensures the "other" resource in the relationship is visible.
+        # We also fetch the user_id who created the relationship.
+        # We also fetch the username of the user who created the relationship.
+        cursor.execute("""
+            SELECT rr.user_id, u.username, rr.resource_a_id, rr.resource_b_id, rr.relationship_type, r_b.title AS other_resource_title, 'outgoing' as direction
+            FROM resource_relationships rr
+            JOIN resources r_b ON rr.resource_b_id = r_b.resource_id
+            JOIN users u ON rr.user_id = u.user_id
+            WHERE rr.resource_a_id = :resource_id
+              AND (r_b.privacy_setting = 'public' OR r_b.user_id = :user_id)
+
+            UNION
+
+            SELECT rr.user_id, u.username, rr.resource_a_id, rr.resource_b_id, rr.relationship_type, r_a.title AS other_resource_title, 'incoming' as direction
+            FROM resource_relationships rr
+            JOIN resources r_a ON rr.resource_a_id = r_a.resource_id
+            JOIN users u ON rr.user_id = u.user_id
+            WHERE rr.resource_b_id = :resource_id
+              AND (r_a.privacy_setting = 'public' OR r_a.user_id = :user_id)
+        """, {"resource_id": resource_id, "user_id": current_user_id})
+
+        all_relationships = [dict(row) for row in cursor.fetchall()]
+
+        my_connections = []
+        others_connections = []
+
+        for rel in all_relationships:
+            if str(rel['user_id']) == str(current_user_id):
+                my_connections.append(rel)
+            else:
+                # Only show connections from others if the primary resource is public
+                if primary_resource['privacy_setting'] == 'public':
+                    others_connections.append(rel)
+
+        return jsonify({
+            "my_connections": my_connections,
+            "others_connections": others_connections
+        }), 200
+    except Exception as e:
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
+
 @app.route('/')
 def index():
     return "NetJam Backend is running!"

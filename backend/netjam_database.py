@@ -5,7 +5,7 @@ netjam_db = sqlite3.connect('netjam.db')
 n = netjam_db.cursor()
 
 n.execute("""
-    CREATE TABLE users (
+    CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
@@ -16,7 +16,7 @@ n.execute("""
 """ )
 
 n.execute("""
-    CREATE TABLE resources (
+    CREATE TABLE IF NOT EXISTS resources (
         resource_id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL,
         url TEXT NOT NULL,
@@ -31,72 +31,85 @@ n.execute("""
 """)
 
 n.execute("""
-    CREATE TABLE tags(
+    CREATE TABLE IF NOT EXISTS tags(
         tag_id INTEGER PRIMARY KEY,
         tag_name TEXT NOT NULL UNIQUE
     )
 """)
 
 n.execute("""
-    CREATE TABLE resource_tags(
+    CREATE TABLE IF NOT EXISTS resource_tags(
         resource_id INTEGER NOT NULL,
         tag_id INTEGER NOT NULL,
         PRIMARY KEY (resource_id, tag_id),
-        FOREIGN KEY (resource_id) REFERENCES resources(resource_id),
-        FOREIGN KEY (tag_id) REFERENCES tags(tag_id)
+        FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
     )
 """)
 
 n.execute("""
-    CREATE TABLE collections (
+    CREATE TABLE IF NOT EXISTS collections (
         collection_id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL,
         collection_name TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     )
 """)
 
 n.execute("""
-    CREATE TABLE collection_resources (
+    CREATE TABLE IF NOT EXISTS collection_resources (
         collection_id INTEGER NOT NULL,
         resource_id INTEGER NOT NULL,
         PRIMARY KEY (collection_id, resource_id),
-        FOREIGN KEY (collection_id) REFERENCES collections(collection_id),
-        FOREIGN KEY (resource_id) REFERENCES resources(resource_id)
+        FOREIGN KEY (collection_id) REFERENCES collections(collection_id) ON DELETE CASCADE,
+        FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
     )
 """)
 
 n.execute("""
-    CREATE TABLE likes (
+    CREATE TABLE IF NOT EXISTS likes (
         like_id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL,
         resource_id INTEGER NOT NULL,
         liked_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(user_id),
-        FOREIGN KEY (resource_id) REFERENCES resources(resource_id)
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
     )
 """)
 
 n.execute("""
-    CREATE TABLE comments (
+    CREATE TABLE IF NOT EXISTS comments (
         comment_id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL,
         resource_id INTEGER NOT NULL,
         comment_text TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(user_id),
-        FOREIGN KEY (resource_id) REFERENCES resources(resource_id)
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
     )
 """)
 
 n.execute("""
-    CREATE TABLE followers (
+    CREATE TABLE IF NOT EXISTS followers (
         follower_id INTEGER NOT NULL,
         followed_id INTEGER NOT NULL,
         PRIMARY KEY (follower_id, followed_id),
-        FOREIGN KEY (follower_id) REFERENCES users(user_id),
-        FOREIGN KEY (followed_id) REFERENCES users(user_id)
+        FOREIGN KEY (follower_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (followed_id) REFERENCES users(user_id) ON DELETE CASCADE
+    )
+""")
+
+n.execute("""
+    CREATE TABLE IF NOT EXISTS resource_relationships (
+        resource_a_id INTEGER NOT NULL,
+        resource_b_id INTEGER NOT NULL,
+        relationship_type TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        PRIMARY KEY (user_id, resource_a_id, resource_b_id, relationship_type),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (resource_a_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
+        FOREIGN KEY (resource_b_id) REFERENCES resources(resource_id) ON DELETE CASCADE
     )
 """)
 

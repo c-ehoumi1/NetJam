@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ConnectResourceModal from './ConnectResourceModal.jsx';
 
-function ViewResource ({ resource }){
+function ViewResource ({ resource, userResources, onConnectionCreated }){
     // State for edit mode
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [isEditingTags, setIsEditingTags] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
 
     // State to hold the values of the inputs while editing
     const [description, setDescription] = useState(resource ? resource.description : '');
     const [notes, setNotes] = useState(resource ? resource.notes : '');
     const [tags, setTags] = useState(resource ? resource.tags : '');
+
+    // Effect to update local state when the resource prop changes
+    useEffect(() => {
+        if (resource) {
+            setDescription(resource.description || '');
+            setNotes(resource.notes || '');
+            setTags(resource.tags || '');
+        }
+    }, [resource]);
+
+    const handleConnectionSuccess = () => {
+        setIsConnecting(false);
+        if (onConnectionCreated) {
+            onConnectionCreated();
+        }
+    };
 
     if (!resource) {
         return null;
@@ -60,9 +78,16 @@ function ViewResource ({ resource }){
 
     return(
         <div>
+            {isConnecting && (
+                <ConnectResourceModal
+                    sourceResource={resource}
+                    userResources={userResources}
+                    onClose={() => setIsConnecting(false)}
+                    onConnect={handleConnectionSuccess}
+                />
+            )}
             <div className="connection-selector-container">
-                <button>Connect to</button>
-                <button>Disconnect from</button>
+                <button onClick={() => setIsConnecting(true)}>Connect to</button>
                 <button>Add to a collection</button>
             </div>
             <div className='description-container'>
