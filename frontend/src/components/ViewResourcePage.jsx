@@ -99,7 +99,7 @@ function ViewResourcePage() {
                     onConnectionCreated={fetchRelationships}
                 />
                 <aside>
-                    <References relationships={relationships} onConnectionDeleted={fetchRelationships} />
+                    <References relationships={relationships} onConnectionDeleted={fetchRelationships} resourceId={resourceId} />
                 </aside>
             </main>
         </div>

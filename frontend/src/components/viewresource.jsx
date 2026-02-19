@@ -3,22 +3,24 @@ import ConnectResourceModal from './ConnectResourceModal.jsx';
 
 function ViewResource ({ resource, userResources, onConnectionCreated }){
     // State for edit mode
-    const [isEditingDescription, setIsEditingDescription] = useState(false);
-    const [isEditingNotes, setIsEditingNotes] = useState(false);
-    const [isEditingTags, setIsEditingTags] = useState(false);
+    const [editingFields, setEditingFields] = useState({});
     const [isConnecting, setIsConnecting] = useState(false);
 
     // State to hold the values of the inputs while editing
-    const [description, setDescription] = useState(resource ? resource.description : '');
-    const [notes, setNotes] = useState(resource ? resource.notes : '');
-    const [tags, setTags] = useState(resource ? resource.tags : '');
+    const [formState, setFormState] = useState({
+        description: resource?.description || '',
+        notes: resource?.notes || '',
+        tags: resource?.tags || '',
+    });
 
     // Effect to update local state when the resource prop changes
     useEffect(() => {
         if (resource) {
-            setDescription(resource.description || '');
-            setNotes(resource.notes || '');
-            setTags(resource.tags || '');
+            setFormState({
+                description: resource.description || '',
+                notes: resource.notes || '',
+                tags: resource.tags || '',
+            });
         }
     }, [resource]);
 
@@ -29,6 +31,15 @@ function ViewResource ({ resource, userResources, onConnectionCreated }){
         }
     };
 
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormState(prevState => ({ ...prevState, [name]: value }));
+    };
+
+    const toggleEdit = (field) => {
+        setEditingFields(prev => ({ ...prev, [field]: !prev[field] }));
+    };
+
     if (!resource) {
         return null;
     }
@@ -37,20 +48,7 @@ function ViewResource ({ resource, userResources, onConnectionCreated }){
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        let body;
-        switch(field) {
-            case 'description':
-                body = { description };
-                break;
-            case 'notes':
-                body = { notes };
-                break;
-            case 'tags':
-                body = { tags };
-                break;
-            default:
-                return;
-        }
+        const body = { [field]: formState[field] };
 
         try {
             const response = await fetch(`/api/resource/${resource.resource_id}`, {
@@ -66,9 +64,7 @@ function ViewResource ({ resource, userResources, onConnectionCreated }){
                 throw new Error(`Failed to update ${field}`);
             }
             // On successful save, exit editing mode
-            if (field === 'description') setIsEditingDescription(false);
-            if (field === 'notes') setIsEditingNotes(false);
-            if (field === 'tags') setIsEditingTags(false);
+            toggleEdit(field);
 
         } catch (error) {
             console.error('Save failed:', error);
@@ -92,21 +88,21 @@ function ViewResource ({ resource, userResources, onConnectionCreated }){
             </div>
             <div className='description-container'>
                 <label htmlFor="description">Description:</label>
-                <textarea id="description" readOnly={!isEditingDescription} value={description} onChange={(e) => setDescription(e.target.value)} />
-                <button onClick={() => isEditingDescription ? handleSave('description') : setIsEditingDescription(true)}>
-                    {isEditingDescription ? 'Save' : 'Edit'}
+                <textarea id="description" name="description" readOnly={!editingFields.description} value={formState.description} onChange={handleInputChange} />
+                <button onClick={() => editingFields.description ? handleSave('description') : toggleEdit('description')}>
+                    {editingFields.description ? 'Save' : 'Edit'}
                 </button>
             </div>
             <div className="notes-container">
                 <label htmlFor="notes">Notes:</label>
-                <textarea id="notes" readOnly={!isEditingNotes} value={notes} onChange={(e) => setNotes(e.target.value)} />
-                <button onClick={() => isEditingNotes ? handleSave('notes') : setIsEditingNotes(true)}>
-                    {isEditingNotes ? 'Save' : 'Edit'}
+                <textarea id="notes" name="notes" readOnly={!editingFields.notes} value={formState.notes} onChange={handleInputChange} />
+                <button onClick={() => editingFields.notes ? handleSave('notes') : toggleEdit('notes')}>
+                    {editingFields.notes ? 'Save' : 'Edit'}
                 </button>
             </div>
             <div className="tags-container">
-                {isEditingTags ? (
-                    <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} />
+                {editingFields.tags ? (
+                    <input type="text" name="tags" value={formState.tags} onChange={handleInputChange} />
                 ) : (
                     resource.tags && resource.tags.split(',').map(tag => (
                         <span key={tag} className="tag">
@@ -114,7 +110,7 @@ function ViewResource ({ resource, userResources, onConnectionCreated }){
                         </span>
                     ))
                 )}
-                <button onClick={() => isEditingTags ? handleSave('tags') : setIsEditingTags(true)}>{isEditingTags ? 'Save' : 'Edit'}</button>
+                <button onClick={() => editingFields.tags ? handleSave('tags') : toggleEdit('tags')}>{editingFields.tags ? 'Save' : 'Edit'}</button>
             </div>
         </div>
     );

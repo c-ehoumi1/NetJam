@@ -510,6 +510,82 @@ def get_relationships(resource_id):
     finally:
         db.close()
 
+
+# --- API Endpoint to add a comment ---
+@app.route('/api/resource/<int:resource_id>/comments', methods=['POST'])
+@jwt_required()
+def add_comment(resource_id):
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+    comment_text = data.get('comment_text')
+
+    if not comment_text:
+        return jsonify({"message": "Comment text is required"}), 400
+
+    db = get_db()
+    try:
+        cursor = db.cursor()
+        # Optional: Verify resource exists and user can view it before commenting
+        cursor.execute("SELECT user_id, privacy_setting FROM resources WHERE resource_id = ?", (resource_id,))
+        resource = cursor.fetchone()
+        if not resource:
+            return jsonify({"message": "Resource not found"}), 404
+        if resource['privacy_setting'] == 'private' and str(resource['user_id']) != str(current_user_id):
+            return jsonify({"message": "You cannot comment on this private resource"}), 403
+
+        cursor.execute(
+            "INSERT INTO comments (resource_id, user_id, comment_text, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+            (resource_id, current_user_id, comment_text,)
+        )
+        db.commit()
+        
+        # Fetch the newly created comment to return it
+        comment_id = cursor.lastrowid
+        cursor.execute("""
+            SELECT c.comment_id, c.comment_text, c.created_at, u.username
+            FROM comments c
+            JOIN users u ON c.user_id = u.user_id
+            WHERE c.comment_id = ?
+        """, (comment_id,))
+        new_comment = dict(cursor.fetchone())
+
+        return jsonify(new_comment), 201
+    except Exception as e:
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
+
+# --- API Endpoint to get comments for a resource ---
+@app.route('/api/resource/<int:resource_id>/comments', methods=['GET'])
+@jwt_required()
+def get_comments(resource_id):
+    current_user_id = get_jwt_identity()
+    db = get_db()
+    try:
+        cursor = db.cursor()
+        # Verify resource exists and user can view it
+        cursor.execute("SELECT user_id, privacy_setting FROM resources WHERE resource_id = ?", (resource_id,))
+        resource = cursor.fetchone()
+        if not resource:
+            return jsonify({"message": "Resource not found"}), 404
+        if resource['privacy_setting'] == 'private' and str(resource['user_id']) != str(current_user_id):
+            return jsonify({"message": "You cannot view comments for this private resource"}), 403
+
+        cursor.execute("""
+            SELECT c.comment_id, c.comment_text, c.created_at, u.username
+            FROM comments c
+            JOIN users u ON c.user_id = u.user_id
+            WHERE c.resource_id = ?
+            ORDER BY c.created_at ASC
+        """, (resource_id,))
+        
+        comments = [dict(row) for row in cursor.fetchall()]
+        return jsonify(comments), 200
+    except Exception as e:
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    finally:
+        db.close()
+
 @app.route('/')
 def index():
     return "NetJam Backend is running!"
